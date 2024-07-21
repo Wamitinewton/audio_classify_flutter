@@ -23,7 +23,7 @@ class AudioClassificationApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      // home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: HomeScreen(title: 'Hello'),
     );
   }
 }
@@ -166,9 +166,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+      ),
+      body: _buildBody(),
+    );
   }
 
-  
+  Widget _buildBody() {
+    if (_showError) {
+      return const Center(
+      child: Text(
+        "Permission required for classification",
+        textAlign: TextAlign.center,
+      ),
+    );
+    } else{
+      return Text('data');
+    }
+  }
 }
 
