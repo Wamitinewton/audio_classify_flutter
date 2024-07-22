@@ -19,8 +19,6 @@ class AudioClassificationApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-       
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
       home: HomeScreen(title: 'Hello'),
@@ -38,18 +36,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-
-  static const platform = MethodChannel('org.tensorflow.audio_classification/audio_record');
+  static const platform =
+      MethodChannel('org.tensorflow.audio_classification/audio_record');
 
   static const _sampleRate = 16000;
   static const _expectAudioLength = 975;
-  final int _requiredInputBuffer = 
-  (16000 * (_expectAudioLength / 1000)).toInt();
+  final int _requiredInputBuffer =
+      (16000 * (_expectAudioLength / 1000)).toInt();
 
   late AudioClassificationHelper _helper;
   List<MapEntry<String, double>> _classification = List.empty();
   final List<Color> _primaryProgressColorList = [
-     const Color(0xFFF44336),
+    const Color(0xFFF44336),
     const Color(0xFFE91E63),
     const Color(0xFF9C27B0),
     const Color(0xFF3F51B5),
@@ -63,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   final List<Color> _backgroundProgressColorList = [
-     const Color(0x44F44336),
+    const Color(0x44F44336),
     const Color(0x44E91E63),
     const Color(0x449C27B0),
     const Color(0x443F51B5),
@@ -80,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _startRecorder() {
     try {
       platform.invokeMethod('startRecord');
-    } on PlatformException catch(e){
+    } on PlatformException catch (e) {
       log("Failed to start record: '${e.message}'. ");
     }
   }
@@ -91,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
         "sampleRate": _sampleRate,
         "requiredInputBuffer": _requiredInputBuffer,
       });
-    } on Exception catch(e){
+    } on Exception catch (e) {
       log("Failed to create recorder: '${e.toString()}'.");
       return false;
     }
@@ -100,10 +98,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<Float32List> _getAudioFloatArray() async {
     var audioFloatArray = Float32List(0);
     try {
-      final Float32List result = 
-      await platform.invokeMethod('getAudioFloatArray');
+      final Float32List result =
+          await platform.invokeMethod('getAudioFloatArray');
       audioFloatArray = result;
-    } on PlatformException catch(e) {
+    } on PlatformException catch (e) {
       log("Failed to get audio array: '${e.message}'.");
     }
     return audioFloatArray;
@@ -119,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-   initState() {
+  initState() {
     // calling the initRecoder method here
     _initRecorder();
     super.initState();
@@ -134,28 +132,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
       Timer.periodic(const Duration(milliseconds: _expectAudioLength), (timer) {
         // running the inference here
+        _runInference();
       });
-    } else{
+    } else {
       setState(() {
         _showError = true;
       });
     }
   }
-
-  Future<void> _runInference() async {
+ Future<void> _runInference() async {
     Float32List inputArray = await _getAudioFloatArray();
-    final result = 
-    await _helper.inference(inputArray.sublist(0, _requiredInputBuffer));
+    final result =
+        await _helper.inference(inputArray.sublist(0, _requiredInputBuffer));
     setState(() {
-      // taking top 3 classifcations
+      // take top 3 classification
       _classification = (result.entries.toList()
-      ..sort(
-        (a, b) => a.value.compareTo(b.value),
-      )
-      )
-      .reversed
-      .take(3)
-      .toList();
+            ..sort(
+              (a, b) => a.value.compareTo(b.value),
+            ))
+          .reversed
+          .take(3)
+          .toList();
     });
   }
 
@@ -164,11 +161,14 @@ class _HomeScreenState extends State<HomeScreen> {
     _closeRecorder();
     super.dispose();
   }
-  @override
+
+@override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        title: Image.asset('assets/images/tfl_logo.png'),
+        backgroundColor: Colors.black.withOpacity(0.5),
       ),
       body: _buildBody(),
     );
@@ -177,14 +177,41 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBody() {
     if (_showError) {
       return const Center(
-      child: Text(
-        "Permission required for classification",
-        textAlign: TextAlign.center,
-      ),
-    );
-    } else{
-      return Text('data');
+        child: Text(
+          "Permission required for classification",
+          textAlign: TextAlign.center,
+        ),
+      );
+    } else {
+      return ListView.separated(
+        padding: const EdgeInsets.all(10),
+        physics: const BouncingScrollPhysics(),
+        shrinkWrap: true,
+        itemCount: _classification.length,
+        itemBuilder: (context, index) {
+          final item = _classification[index];
+          return Row(
+            children: [
+              SizedBox(
+                width: 200,
+                child: Text(item.key),
+              ),
+              Flexible(
+                  child: LinearProgressIndicator(
+                backgroundColor: _backgroundProgressColorList[
+                    index % _backgroundProgressColorList.length],
+                color: _primaryProgressColorList[
+                    index % _primaryProgressColorList.length],
+                value: item.value,
+                minHeight: 20,
+              ))
+            ],
+          );
+        },
+        separatorBuilder: (BuildContext context, int index) => const SizedBox(
+          height: 10,
+        ),
+      );
     }
   }
 }
-
